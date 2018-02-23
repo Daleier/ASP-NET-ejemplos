@@ -8,8 +8,11 @@
 
 <script runat="server">
     Dim conexion As SqlConnection
+
     Sub page_load()
-        conexion = New SqlConnection("server=localhost;database=Tienda;trusted_connection=yes")
+        conexion = New SqlConnection("server=localhost\DAVIDB;database=Tienda;trusted_connection=yes")
+        leer()
+
         If Not Page.IsPostBack Then
             Dim ListaOpciones = New ArrayList
             ListaOpciones.Add("Insertar")
@@ -30,13 +33,12 @@
 
     'lectura de los datos de la tabla
     Sub leer()
-        Dim datos = New DataSet
-        Dim comando = New SqlDataAdapter("select Cod_com, nombre, tipo, precio, cantidad from Tienda", conexion)
+        Dim comando = New SqlCommand("select Cod_com, nombre, tipo, precio, cantidad from Componentes", conexion)
         conexion.Open()
-        comando.Fill(datos, "mis_libros")
-        Repeater1.DataSource = datos.Tables("mis_libros")
+        Dim datos As SqlDataReader
+        datos = comando.ExecuteReader()
+        Repeater1.DataSource = datos
         Repeater1.DataBind()
-
         conexion.Close()
     End Sub
 
@@ -59,12 +61,17 @@
                 Label1.Text = "No se puede añadir el componente"
             End If
             Label1.Style("color") = "red"
+        Catch ex2 As FormatException
+            Label1.Text = "Se deben rellenar todos los campos"
+            Label1.Style("color") = "red"
         End Try
+        conexion.Close()
+        page_load()
     End Sub
 
     'elimina un registro de la tabla
     Sub eliminar()
-        Dim comando = New SqlCommand("delete compenentes where cod_com = @cod_com", conexion)
+        Dim comando = New SqlCommand("delete componentes where cod_com = @cod_com", conexion)
         comando.Parameters.Add(New SqlParameter("@cod_com", SqlDbType.NChar, 4)).Value = deleteCod_com.Text
         conexion.Open()
         Try
@@ -75,6 +82,7 @@
             Label1.Style("color") = "red"
         End Try
         conexion.Close()
+        page_load()
     End Sub
 
     'modifica un registro de la tabla
@@ -88,30 +96,34 @@
         comando.Parameters.Add(New SqlParameter("@cantidad", SqlDbType.Int, 30)).Value = modifyCantidad.Text
         conexion.Open()
         Try
-            contar = comando.ExecuteNonQuery()
+            contar = comando.ExecuteNonQuery
             If contar = 0 Then
                 Label1.Text = "El Componente no existe"
             Else
-                Label1.Text = "Cliente Modificado"
+                Label1.Text = "Componente Modificado"
             End If
         Catch ex As SqlException
-            Label1.Text = "No se ha podido modificar el télefono del cliente"
+            Label1.Text = "No se ha podido modificar el componente"
+            Label1.Style("color") = "red"
+        Catch ex2 As FormatException
+            Label1.Text = "Se deben rellenar todos los campos"
             Label1.Style("color") = "red"
         End Try
+        page_load()
         conexion.Close()
     End Sub
 
     'cambia los objetos visibles en las web dependiendo de la opción elegida
     Sub visualizar()
-        If RBLMenu.SelectedIndex.ToString = "Insertar" Then
+        If RBLMenu.SelectedItem.ToString = "Insertar" Then
             TableAdd.Visible = "True"
             TableModify.Visible = "False"
             TableDelete.Visible = "False"
-        ElseIf RBLMenu.SelectedIndex.ToString = "Modificar" Then
+        ElseIf RBLMenu.SelectedItem.ToString = "Modificar" Then
             TableAdd.Visible = "False"
             TableModify.Visible = "True"
             TableDelete.Visible = "False"
-        ElseIf RBLMenu.SelectedIndex.ToString = "Eliminar" Then
+        ElseIf RBLMenu.SelectedItem.ToString = "Eliminar" Then
             TableAdd.Visible = "False"
             TableModify.Visible = "False"
             TableDelete.Visible = "True"
@@ -126,14 +138,14 @@
 </head>
 <body>
     <form id="form1" runat="server">
-    <div id="aceptar">
+    <div>
         <h1>Gestión Tabla Componentes</h1>
         <br/ >
         <!-- selecciona la operación a realizar sobre la base de datos-->
         <asp:RadioButtonList ID="RBLMenu" runat="server" OnSelectedIndexChanged="visualizar" AutoPostBack="true"></asp:RadioButtonList>
-        
+        <br /><br />
         <!-- añadir componente-->
-        <table id="TableAdd" runat="server">
+        <table id="TableAdd" runat="server" visible="false">
             <tr>
                 <th colspan="2">AÑADIR COMPONENTE</th>
             </tr>
@@ -167,7 +179,7 @@
         </table>
         
         <!-- modificar componente-->
-        <table id="TableModify" runat="server">
+        <table id="TableModify" runat="server" visible="false">
             <tr>
                 <th colspan="2">MODIFICAR COMPONENTE</th>
             </tr>
@@ -201,7 +213,7 @@
         </table>
 
         <!-- elimina componente -->
-        <table id="TableDelete" runat="server">
+        <table id="TableDelete" runat="server" visible="false">
             <tr>
                 <th colspan="2">ELIMINAR COMPONENTE</th>
             </tr>
@@ -219,7 +231,8 @@
         </table>
 
         <!--muestra mensaje de error/confirmación -->
-        <asp:Label ID="Label1" runat="server" Text="Label"></asp:Label>
+        <asp:Label ID="Label1" runat="server" Text=""></asp:Label>
+        <br /><br /><br />
          <!-- muestra el contenido de la tabla -->
         <asp:Repeater ID="Repeater1" runat="server">
              <HeaderTemplate>
@@ -229,14 +242,16 @@
                         <th>Nombre</th>
                         <th>Tipo</th>
                         <th>Precio</th>
+                        <th>Cantidad</th>
                     </tr>
             </HeaderTemplate>
             <ItemTemplate>
                 <tr>
-                    <td><%#Eval("Código") %></td>
+                    <td><%#Eval("cod_com") %></td>
                     <td><%#Eval("Nombre") %></td>
                     <td><%#Eval("Tipo") %></td>
                     <td><%#Eval("Precio") %></td>
+                    <td><%#Eval("Cantidad") %></td>
                 </tr>
             </ItemTemplate>
             <FooterTemplate>
